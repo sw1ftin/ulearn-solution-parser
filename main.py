@@ -11,15 +11,17 @@ auth_token = os.getenv("ulearn.auth")
 # YOUR VALUES HERE
 file_extension = "py"
 course = "ml"
+headless = True
 # ==========================================
 
 if not os.path.exists("solutions"):
     os.mkdir("solutions")
 
-url = f"https://ulearn.me/courses/{course}"
-link = f"https://api.ulearn.me/courses/{course}"
+link = f"https://ulearn.me/courses/{course}"
+course_link = f"https://ulearn.me/course/{course}"
+api_link = f"https://api.ulearn.me/courses/{course}"
 
-response = requests.get(link)
+response = requests.get(api_link)
 data = json.loads(response.text)
 
 title = data["title"]
@@ -30,7 +32,7 @@ if not os.path.exists(f"solutions/{id}"):
     os.mkdir(f"solutions/{id}")
 
 with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
+    browser = p.chromium.launch(headless=headless)
     context = browser.new_context()
     context.add_cookies(
         [
@@ -43,13 +45,15 @@ with sync_playwright() as p:
         ]
     )
     page = context.new_page()
-    for unit in units:
+    for num_unit, unit in enumerate(units):
+        print(f"\n\t==== Unit: {num_unit + 1}/{len(units)} ====")
         if not os.path.exists(f"solutions/{id}/{unit['title']}"):
             os.mkdir(f"solutions/{id}/{unit['title']}")
         slides = unit["slides"]
-        for slide in slides:
+        for num, slide in enumerate(slides):
+            print(f"\t--- Slide: {num + 1}/{len(slides)} ---")
             print(f'Parsing "{slide["title"]}"...')
-            page.goto(f"https://ulearn.me/course/{course}/{slide['slug']}")
+            page.goto(f"{course_link}/{slide['slug']}")
             page.wait_for_selector(".CodeMirror")
             code = page.evaluate(
                 "() => { const cms = document.querySelectorAll('.CodeMirror'); const last = cms[cms.length - 1]; return last.CodeMirror.getValue(); }"
@@ -61,5 +65,5 @@ with sync_playwright() as p:
             ) as f:
                 f.write(code)
             print(
-                f'Saved "{slide["title"]}.{file_extension}" in "solutions/{id}/{unit["title"]}/"\n\n'
+                f'Saved "{slide["title"]}.{file_extension}" in "solutions/{id}/{unit["title"]}/"'
             )
