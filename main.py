@@ -9,9 +9,11 @@ auth_token = os.getenv("ulearn.auth")
 
 # ==========================================
 # YOUR VALUES HERE
-file_extension = "py"
 course = "ml"
+file_extension = "py"
+
 headless = True
+timeout = 2000          # 2s, change if not enough to parse code from page
 # ==========================================
 
 if not os.path.exists("solutions"):
@@ -54,16 +56,19 @@ with sync_playwright() as p:
             print(f"\t--- Slide: {num + 1}/{len(slides)} ---")
             print(f'Parsing "{slide["title"]}"...')
             page.goto(f"{course_link}/{slide['slug']}")
-            page.wait_for_selector(".CodeMirror")
-            code = page.evaluate(
-                "() => { const cms = document.querySelectorAll('.CodeMirror'); const last = cms[cms.length - 1]; return last.CodeMirror.getValue(); }"
-            )
-            with open(
-                f"solutions/{id}/{unit['title']}/{slide['title']}.{file_extension}",
-                "w",
-                encoding="utf-8",
-            ) as f:
-                f.write(code)
-            print(
-                f'Saved "{slide["title"]}.{file_extension}" in "solutions/{id}/{unit["title"]}/"'
-            )
+            try:
+                page.wait_for_selector(".CodeMirror", timeout=timeout)
+                code = page.evaluate(
+                    "() => { const cms = document.querySelectorAll('.CodeMirror'); const last = cms[cms.length - 1]; return last.CodeMirror.getValue(); }"
+                )
+                with open(
+                    f"solutions/{id}/{unit['title']}/{slide['title']}.{file_extension}",
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    f.write(code)
+                print(
+                    f'Saved "{slide["title"]}.{file_extension}" in "solutions/{id}/{unit["title"]}/"'
+                )
+            except Exception:
+                print('No code found')
